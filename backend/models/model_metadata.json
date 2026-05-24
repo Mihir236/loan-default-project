@@ -1,0 +1,218 @@
+{
+    "model_name": "Random Forest Classifier",
+    "parameters": {
+        "n_estimators": 100,
+        "max_depth": 12,
+        "class_weight": "balanced"
+    },
+    "metrics": {
+        "accuracy": 0.7773839827687488,
+        "roc_auc": 0.7517835772601754,
+        "precision_default": 0.27035472972972974,
+        "recall_default": 0.5397066262013152,
+        "f1_score_default": 0.3602498452535029,
+        "precision_non_default": 0.9304104002039255,
+        "recall_non_default": 0.8086133941824143,
+        "f1_score_non_default": 0.8652467138403916,
+        "confusion_matrix": [
+            [
+                36500,
+                8639
+            ],
+            [
+                2730,
+                3201
+            ]
+        ]
+    },
+    "feature_importances": [
+        {
+            "feature": "Age",
+            "importance": 0.21440968270417604
+        },
+        {
+            "feature": "InterestRate",
+            "importance": 0.16081484038114893
+        },
+        {
+            "feature": "Income",
+            "importance": 0.1386947174704903
+        },
+        {
+            "feature": "MonthsEmployed",
+            "importance": 0.10206394290135629
+        },
+        {
+            "feature": "LoanAmount",
+            "importance": 0.10147692747724292
+        },
+        {
+            "feature": "CreditScore",
+            "importance": 0.05953438386663944
+        },
+        {
+            "feature": "DTIRatio",
+            "importance": 0.04753088482365969
+        },
+        {
+            "feature": "LoanPurpose",
+            "importance": 0.02823140522435826
+        },
+        {
+            "feature": "EmploymentType",
+            "importance": 0.02693872173245568
+        },
+        {
+            "feature": "Education",
+            "importance": 0.024315044296365954
+        },
+        {
+            "feature": "MaritalStatus",
+            "importance": 0.01921362521787729
+        },
+        {
+            "feature": "LoanTerm",
+            "importance": 0.01789464638843778
+        },
+        {
+            "feature": "NumCreditLines",
+            "importance": 0.017806016965231795
+        },
+        {
+            "feature": "HasCoSigner",
+            "importance": 0.015080011732383831
+        },
+        {
+            "feature": "HasDependents",
+            "importance": 0.01382715129891668
+        },
+        {
+            "feature": "HasMortgage",
+            "importance": 0.012167997519259099
+        }
+    ],
+    "raw_feature_importances": [
+        {
+            "feature": "Age",
+            "importance": 0.21440968270417604
+        },
+        {
+            "feature": "InterestRate",
+            "importance": 0.16081484038114893
+        },
+        {
+            "feature": "Income",
+            "importance": 0.1386947174704903
+        },
+        {
+            "feature": "MonthsEmployed",
+            "importance": 0.10206394290135629
+        },
+        {
+            "feature": "LoanAmount",
+            "importance": 0.10147692747724292
+        },
+        {
+            "feature": "CreditScore",
+            "importance": 0.05953438386663944
+        },
+        {
+            "feature": "DTIRatio",
+            "importance": 0.04753088482365969
+        },
+        {
+            "feature": "LoanTerm",
+            "importance": 0.01789464638843778
+        },
+        {
+            "feature": "NumCreditLines",
+            "importance": 0.017806016965231795
+        },
+        {
+            "feature": "EmploymentType_Full-time",
+            "importance": 0.010045798121949914
+        },
+        {
+            "feature": "HasCoSigner_Yes",
+            "importance": 0.00803871526356289
+        },
+        {
+            "feature": "EmploymentType_Unemployed",
+            "importance": 0.007489065990291762
+        },
+        {
+            "feature": "MaritalStatus_Married",
+            "importance": 0.007276737198960154
+        },
+        {
+            "feature": "HasCoSigner_No",
+            "importance": 0.007041296468820941
+        },
+        {
+            "feature": "HasDependents_No",
+            "importance": 0.007039265658889712
+        },
+        {
+            "feature": "Education_High School",
+            "importance": 0.0068962707945782915
+        },
+        {
+            "feature": "LoanPurpose_Home",
+            "importance": 0.006845952330406032
+        },
+        {
+            "feature": "HasDependents_Yes",
+            "importance": 0.0067878856400269685
+        },
+        {
+            "feature": "Education_PhD",
+            "importance": 0.006406316284813966
+        },
+        {
+            "feature": "MaritalStatus_Divorced",
+            "importance": 0.006275895408047551
+        },
+        {
+            "feature": "HasMortgage_Yes",
+            "importance": 0.006187645736131165
+        },
+        {
+            "feature": "HasMortgage_No",
+            "importance": 0.005980351783127934
+        },
+        {
+            "feature": "LoanPurpose_Business",
+            "importance": 0.005680174623080971
+        },
+        {
+            "feature": "MaritalStatus_Single",
+            "importance": 0.005660992610869588
+        },
+        {
+            "feature": "Education_Master's",
+            "importance": 0.005636769285930087
+        }
+    ],
+    "features": {
+        "numerical": [
+            "Age",
+            "Income",
+            "LoanAmount",
+            "CreditScore",
+            "MonthsEmployed",
+            "NumCreditLines",
+            "InterestRate",
+            "LoanTerm",
+            "DTIRatio"
+        ],
+        "categorical": [
+            "Education",
+            "EmploymentType",
+            "MaritalStatus",
+            "HasMortgage",
+            "HasDependents",
+            "LoanPurpose",
+            "HasCoSigner"
+        ]
+    }
+}
