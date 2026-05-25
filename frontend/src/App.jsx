@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 // API Base URL (FastAPI)
-const API_URL = 'http://localhost:8000';
+const API_URL = 'https://loan-default-project-swky.onrender.com';
+
 
 function App() {
   const [activeTab, setActiveTab] = useState('single'); // 'single', 'batch', 'analytics', 'history'
