@@ -1,14 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 // API Base URL (FastAPI)
-const API_URL = 'https://loan-default-project-swky.onrender.com';
-
+const API_URL = 'http://localhost:8000';
 
 function App() {
   const [activeTab, setActiveTab] = useState('single'); // 'single', 'batch', 'analytics', 'history'
   const [modelStatus, setModelStatus] = useState('loading'); // 'loading', 'active', 'error'
   const [modelMeta, setModelMeta] = useState(null);
   
+  // Mobile navigation state
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // User/Session state
+  const [username, setUsername] = useState('Mihir');
+
   // Single prediction states
   const [formInputs, setFormInputs] = useState({
     Age: 40,
@@ -37,9 +42,9 @@ function App() {
   const [batchFile, setBatchFile] = useState(null);
   const [batchResult, setBatchResult] = useState(null);
   const [batchLoading, setBatchLoading] = useState(false);
-  const [batchError, setBatchError] = useState(null);
   const [dragActive, setDragActive] = useState(false);
   const [batchPage, setBatchPage] = useState(1);
+  const [batchError, setBatchError] = useState(null);
   const fileInputRef = useRef(null);
 
   // Database History states
@@ -55,12 +60,12 @@ function App() {
     fetchModelInfo();
   }, []);
 
-  // Fetch database history when history tab is clicked
+  // Fetch database history when history tab is active or username changes
   useEffect(() => {
     if (activeTab === 'history') {
       fetchHistory();
     }
-  }, [activeTab]);
+  }, [activeTab, username]);
 
   const fetchModelInfo = async () => {
     setModelStatus('loading');
@@ -82,7 +87,7 @@ function App() {
     setHistoryLoading(true);
     setHistoryError(null);
     try {
-      const response = await fetch(`${API_URL}/history`);
+      const response = await fetch(`${API_URL}/history?username=${username}`);
       if (!response.ok) {
         throw new Error('Failed to retrieve history logs');
       }
@@ -102,16 +107,18 @@ function App() {
     }
     
     try {
-      const response = await fetch(`${API_URL}/history/${id}`, {
+      const response = await fetch(`${API_URL}/history/${id}?username=${username}`, {
         method: 'DELETE'
       });
+      
       if (!response.ok) {
-        throw new Error('Failed to delete database record');
+        const errData = await response.json();
+        throw new Error(errData.detail || 'Failed to delete database record');
       }
-      // Remove from state
+      // Remove from local state
       setHistoryRecords(prev => prev.filter(r => r.id !== id));
     } catch (err) {
-      alert(`Error deleting record: ${err.message}`);
+      alert(`Error: ${err.message}`);
     }
   };
 
@@ -136,14 +143,12 @@ function App() {
       HasCoSigner: record.HasCoSigner
     });
     
-    // Set prediction values so we don't have to call server again
     setSingleResult({
       probability: record.probability,
       prediction: record.prediction,
       risk_category: record.risk_category,
-      // Re-trigger factors computation locally or wait for user to hit recalculate
-      factors: [], // Form will show the metrics, user can click evaluate to get fresh XAI
-      recommendations: ["Loaded from database history. Click 'Evaluate Default Risk' to refresh key factors."]
+      factors: [],
+      recommendations: [`Loaded record #${record.id} created by ${record.username}. Click Evaluate to run fresh explanations.`]
     });
     
     setActiveTab('single');
@@ -164,14 +169,19 @@ function App() {
     setSingleLoading(true);
     setSingleError(null);
     
-    // Slight artificial delay for UX (to show the "evaluating" scanner)
+    // Slight artificial delay for UX
     await new Promise(resolve => setTimeout(resolve, 800));
+
+    const payload = {
+      Username: username,
+      ...formInputs
+    };
 
     try {
       const response = await fetch(`${API_URL}/predict`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formInputs)
+        body: JSON.stringify(payload)
       });
       
       if (!response.ok) {
@@ -254,7 +264,7 @@ function App() {
     }
   };
 
-  // Generate and download sample CSV client-side
+  // Generate and download sample CSV
   const downloadSampleCSV = () => {
     const headers = "Age,Income,LoanAmount,CreditScore,MonthsEmployed,NumCreditLines,InterestRate,LoanTerm,DTIRatio,Education,EmploymentType,MaritalStatus,HasMortgage,HasDependents,LoanPurpose,HasCoSigner\n";
     const rows = [
@@ -274,7 +284,7 @@ function App() {
     window.URL.revokeObjectURL(url);
   };
 
-  // Trigger file download for enriched batch prediction results
+  // Trigger file download
   const downloadResultsCSV = () => {
     if (!batchResult || !batchResult.full_results_csv) return;
     
@@ -331,24 +341,60 @@ function App() {
   const filteredHistory = historyRecords.filter(record => {
     const matchesSearch = record.id.toString().includes(historySearch) || 
                           record.LoanAmount.toString().includes(historySearch) ||
-                          record.CreditScore.toString().includes(historySearch);
+                          record.CreditScore.toString().includes(historySearch) ||
+                          (record.username && record.username.toLowerCase().includes(historySearch.toLowerCase()));
     const matchesFilter = historyFilter === 'All' || record.risk_category === historyFilter;
     return matchesSearch && matchesFilter;
   });
 
+  const isAdmin = username.toLowerCase() === 'admin';
+
   return (
     <div className="app-container">
+      {/* Mobile Sticky Header (Hidden on Desktop) */}
+      <div className="mobile-header">
+        <button className="hamburger-btn" onClick={() => setSidebarOpen(true)}>
+          ☰
+        </button>
+        <span className="brand-name" style={{ fontSize: '1.1rem' }}>RiskShield AI</span>
+        <div style={{ width: '24px' }}></div> {/* Spacer */}
+      </div>
+
+      {/* Dark Blur Overlay (closes sidebar drawer on tap) */}
+      {sidebarOpen && (
+        <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)}></div>
+      )}
+
       {/* Navigation Sidebar */}
-      <aside className="sidebar">
+      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="brand-section">
           <div className="brand-icon">L</div>
           <div className="brand-name">RiskShield AI</div>
+        </div>
+
+        {/* User Session Profile Card */}
+        <div style={{ padding: '0.75rem 1rem', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '1.5rem' }}>
+          <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '0.4rem', fontWeight: 600 }}>
+            Underwriter Profile
+          </label>
+          <input 
+            type="text" 
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Type username..."
+            style={{ width: '100%', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'white', padding: '0.4rem 0.6rem', fontSize: '0.85rem', outline: 'none' }}
+          />
+          {isAdmin && (
+            <div style={{ fontSize: '0.7rem', color: 'var(--color-primary)', fontWeight: 700, marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+              <span>🔑</span> Admin Privileges Active
+            </div>
+          )}
         </div>
         
         <nav className="nav-menu">
           <button 
             className={`nav-item ${activeTab === 'single' ? 'active' : ''}`}
-            onClick={() => setActiveTab('single')}
+            onClick={() => { setActiveTab('single'); setSidebarOpen(false); }}
           >
             <span className="nav-icon">👤</span>
             Single Predict
@@ -356,7 +402,7 @@ function App() {
           
           <button 
             className={`nav-item ${activeTab === 'batch' ? 'active' : ''}`}
-            onClick={() => setActiveTab('batch')}
+            onClick={() => { setActiveTab('batch'); setSidebarOpen(false); }}
           >
             <span className="nav-icon">📁</span>
             Batch Upload
@@ -364,7 +410,7 @@ function App() {
 
           <button 
             className={`nav-item ${activeTab === 'history' ? 'active' : ''}`}
-            onClick={() => setActiveTab('history')}
+            onClick={() => { setActiveTab('history'); setSidebarOpen(false); }}
           >
             <span className="nav-icon">💾</span>
             Database History
@@ -372,7 +418,7 @@ function App() {
           
           <button 
             className={`nav-item ${activeTab === 'analytics' ? 'active' : ''}`}
-            onClick={() => setActiveTab('analytics')}
+            onClick={() => { setActiveTab('analytics'); setSidebarOpen(false); }}
           >
             <span className="nav-icon">📊</span>
             Model Analytics
@@ -409,7 +455,7 @@ function App() {
           <div className="tab-content">
             <header>
               <h1>Single Loan Risk Evaluator</h1>
-              <p>Assess default probability and identify risk factors. Saves results to the database automatically.</p>
+              <p>Assess default probability and identify risk factors. Saves results under underwriter **{username}**.</p>
             </header>
 
             {modelStatus === 'error' && (
@@ -423,7 +469,6 @@ function App() {
             )}
 
             <div className="grid-2col">
-              {/* Form Input Card */}
               <div className="glass-card">
                 <form onSubmit={handleSinglePredict}>
                   <div className="glass-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -662,7 +707,6 @@ function App() {
                 </form>
               </div>
 
-              {/* Prediction Results Display Card */}
               <div className="glass-card results-card" style={{ justifyContent: singleLoading ? 'center' : 'flex-start' }}>
                 <div className="glass-card-header" style={{ width: '100%', textAlign: 'left' }}>
                   <h2><span>🛡️</span> Risk Assessment</h2>
@@ -680,7 +724,7 @@ function App() {
                     <div style={{ fontSize: '3rem', marginBottom: '1.5rem' }}>📈</div>
                     <h3>Ready for Evaluation</h3>
                     <p style={{ fontSize: '0.85rem', marginTop: '0.5rem', color: 'var(--text-muted)' }}>
-                      Adjust the applicant parameters on the left and click "Evaluate Default Risk" to view probability scores, risk bands, and explanatory drivers.
+                      Adjust parameters on the left and click "Evaluate Default Risk" to view probability scores, risk bands, and explanatory drivers.
                     </p>
                   </div>
                 )}
@@ -722,7 +766,7 @@ function App() {
 
                     {singleResult.db_id && (
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-                        Saved to Credit Registry: <strong>Record #{singleResult.db_id}</strong>
+                        Saved to Credit Registry: <strong>Record #{singleResult.db_id}</strong> by <strong>{username}</strong>
                       </div>
                     )}
 
@@ -934,15 +978,19 @@ function App() {
           <div className="tab-content">
             <header>
               <h1>Credit Registry Database</h1>
-              <p>Browse through historical applicant files and predictions logged in the SQLite registry.</p>
+              <p>
+                {isAdmin 
+                  ? "Viewing all historical application logs across all underwriters (Admin Mode)." 
+                  : `Viewing historical application logs created by underwriter **${username}**.`
+                }
+              </p>
             </header>
 
-            {/* Filter and Search Bar */}
             <div className="glass-card" style={{ padding: '1.25rem', marginBottom: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-              <div style={{ flexGrow: 1, minWidth: '240px' }}>
+              <div style={{ flexGrow: 1, minWidth: '200px' }}>
                 <input 
                   type="text" 
-                  placeholder="Search by application ID, Credit Score or Loan Amount..."
+                  placeholder={isAdmin ? "Search by ID, Score, Amount or Officer..." : "Search by ID, Score or Amount..."}
                   value={historySearch}
                   onChange={(e) => { setHistorySearch(e.target.value); setHistoryPage(1); }}
                   style={{ width: '100%', backgroundColor: 'rgba(22, 20, 38, 0.6)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'white', padding: '0.65rem 0.85rem', outline: 'none' }}
@@ -955,7 +1003,7 @@ function App() {
                   onChange={(e) => { setHistoryFilter(e.target.value); setHistoryPage(1); }}
                   style={{ backgroundColor: 'rgba(22, 20, 38, 0.6)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'white', padding: '0.65rem 0.85rem', outline: 'none' }}
                 >
-                  <option value="All">All Risks Levels</option>
+                  <option value="All">All Risks</option>
                   <option value="Low">Low Risk</option>
                   <option value="Medium">Medium Risk</option>
                   <option value="High">High Risk</option>
@@ -963,7 +1011,7 @@ function App() {
               </div>
 
               <button onClick={fetchHistory} className="btn" style={{ padding: '0.65rem 1rem', fontSize: '0.85rem', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'white' }}>
-                🔄 Refresh Logs
+                🔄 Refresh
               </button>
             </div>
 
@@ -971,7 +1019,7 @@ function App() {
               <div className="glass-card" style={{ textAlign: 'center', padding: '4rem 0' }}>
                 <div className="scanning-container">
                   <div className="scanning-circle"></div>
-                  <div className="scanning-text">Loading historical records from SQL database...</div>
+                  <div className="scanning-text">Loading registry logs from SQL database...</div>
                 </div>
               </div>
             )}
@@ -1001,6 +1049,7 @@ function App() {
                       <tr>
                         <th>ID</th>
                         <th>Timestamp</th>
+                        {isAdmin && <th>Officer</th>}
                         <th>Credit Score</th>
                         <th>Annual Income</th>
                         <th>Loan Amount</th>
@@ -1016,7 +1065,12 @@ function App() {
                         .map((row) => (
                           <tr key={row.id}>
                             <td style={{ fontWeight: 600, color: 'white' }}>#{row.id}</td>
-                            <td>{new Date(row.timestamp).toLocaleString()}</td>
+                            <td>{new Date(row.timestamp).toLocaleDateString()}</td>
+                            {isAdmin && (
+                              <td style={{ color: 'var(--color-primary)', fontWeight: 600 }}>
+                                {row.username}
+                              </td>
+                            )}
                             <td style={{ fontWeight: 600 }}>{row.CreditScore}</td>
                             <td>${row.Income.toLocaleString(undefined, {maximumFractionDigits:0})}</td>
                             <td>${row.LoanAmount.toLocaleString(undefined, {maximumFractionDigits:0})}</td>
@@ -1097,7 +1151,6 @@ function App() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                 
-                {/* Metadata & Core Metrics */}
                 <div className="grid-2col" style={{ gridTemplateColumns: '1fr 1fr' }}>
                   <div className="glass-card">
                     <div className="glass-card-header">
@@ -1160,11 +1213,10 @@ function App() {
                   </div>
                 </div>
 
-                {/* Feature Importance & Confusion Matrix */}
                 <div className="grid-2col">
                   <div className="glass-card">
                     <div className="glass-card-header">
-                      <h2><span>📊</span> Feature Importances (Base Columns)</h2>
+                      <h2><span>📊</span> Feature Importances</h2>
                     </div>
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                       Relative weight the model assigns to each base feature when computing default probabilities.
@@ -1180,7 +1232,7 @@ function App() {
                               style={{ width: `${item.importance * 100 * 3.5}%` }}
                             />
                           </div>
-                          <div className="chart-bar-value">{(item.importance * 100).toFixed(1)}%</div>
+                          <div className="chart-bar-value">{ (item.importance * 100).toFixed(1) }%</div>
                         </div>
                       ))}
                     </div>
